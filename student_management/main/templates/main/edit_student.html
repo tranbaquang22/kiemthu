@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chỉnh sửa sinh viên</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0f8ff;
+        }
+        .card {
+            margin-top: 50px;
+            border-radius: 10px;
+        }
+        .btn-custom {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-custom:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card shadow">
+            <div class="card-body">
+                <h3 class="text-center">Chỉnh sửa sinh viên</h3>
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="name">Tên sinh viên</label>
+                        <input type="text" name="name" id="name" class="form-control" value="{{ student.name }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" name="email" id="email" class="form-control" value="{{ student.email }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-custom btn-block">Cập nhật sinh viên</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

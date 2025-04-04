@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xóa Sinh Viên</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container">
+        <h2 class="mt-5 text-center">Bạn có chắc chắn muốn xóa sinh viên này?</h2>
+        <form method="POST">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-block">Xóa Sinh Viên</button>
+        </form>
+        <a href="{% url 'student_list' %}" class="btn btn-secondary mt-2 btn-block">Quay lại</a>
+    </div>
+</body>
+</html>
