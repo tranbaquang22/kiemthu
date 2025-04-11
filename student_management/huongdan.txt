@@ -4,3 +4,4 @@ python manage.py makemigrations
 python manage.py migrate ( tạo bảng )
 python manage.py createsuperuser ( tạo tk admin )
 python manage.py runserver  (chạy chương trình)
+
