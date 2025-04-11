@@ -69,14 +69,12 @@ def register_view(request):
 
     return render(request, 'main/register.html', {'form': form})
 
-
 # -------- Danh sách sinh viên --------
 def student_list(request):
     if not request.user.is_authenticated:
         return redirect('login')
     students = Student.objects.all().order_by('id')
     return render(request, 'main/student_list.html', {'students': students})
-
 
 # -------- Thêm / Chỉnh sửa sinh viên --------
 def student_form(request, id=None):
@@ -98,7 +96,6 @@ def student_form(request, id=None):
     }
 
     if request.method == "POST":
-        # Nếu từ Postman JSON
         if request.headers.get('Content-Type') == 'application/json':
             try:
                 data = json.loads(request.body)
@@ -110,7 +107,6 @@ def student_form(request, id=None):
             except json.JSONDecodeError:
                 return JsonResponse({'errors': ['Dữ liệu không hợp lệ.']}, status=400)
         else:
-            # Dữ liệu từ form
             name = request.POST.get('name', '').strip()
             age = request.POST.get('age', '').strip()
             email = request.POST.get('email', '').strip()
@@ -177,7 +173,6 @@ def student_form(request, id=None):
 
     return render(request, 'main/student_form.html', {'form_data': form_data, 'student': student})
 
-
 # -------- Xóa sinh viên --------
 def delete_student(request, id):
     if not request.user.is_authenticated:
@@ -186,12 +181,10 @@ def delete_student(request, id):
     student.delete()
     return JsonResponse({'message': 'Sinh viên đã được xóa.'}, status=200)
 
-
 # -------- Đăng xuất --------
 def logout_view(request):
     logout(request)
     return redirect('login')
-
 
 # -------- Lấy CSRF token --------
 def get_csrf_token(request):
