@@ -213,9 +213,9 @@ def delete_student(request, id):
     else:
         if not request.user.is_authenticated:
             return JsonResponse({'error': 'Unauthorized'}, status=401)
-        student = get_object_or_404(Student, id=id)
-        student.delete()
-        return JsonResponse({'message': 'Sinh viên đã được xóa.'}, status=200)
+    student = get_object_or_404(Student, id=id)
+    student.delete()
+    return JsonResponse({'message': 'Sinh viên đã được xóa.'}, status=200)
 
 # -------- Đăng xuất --------
 def logout_view(request):
