@@ -93,11 +93,30 @@ def register_view(request):
 
 # -------- Danh sách sinh viên --------
 def student_list(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    is_json = request.headers.get('Content-Type') == 'application/json'
+    user = get_user_from_token(request) if is_json else request.user
+
+    if not user or not user.is_authenticated:
+        return JsonResponse({'error': 'Unauthorized'}, status=401) if is_json else redirect('login')
+
     students = Student.objects.all().order_by('id')
+
+    if is_json or request.headers.get('Authorization'):
+        student_data = []
+        for student in students:
+            student_data.append({
+                'id': student.id,
+                'name': student.name,
+                'age': student.age,
+                'email': student.email,
+                'phone': student.phone,
+                'address': student.address,
+            })
+        return JsonResponse({'students': student_data}, status=200)
+
     return render(request, 'main/student_list.html', {'students': students})
 
+# -------- Thêm / Chỉnh sửa sinh viên --------
 # -------- Thêm / Chỉnh sửa sinh viên --------
 def student_form(request, id=None):
     is_json = request.headers.get('Content-Type') == 'application/json'
@@ -106,103 +125,112 @@ def student_form(request, id=None):
         user = get_user_from_token(request)
         if not user:
             return JsonResponse({'error': 'Unauthorized'}, status=401)
-        student = None
-        if id:
-            student = get_object_or_404(Student, id=id)
+        student = get_object_or_404(Student, id=id) if id else None
     else:
         if not request.user.is_authenticated:
-            if is_json:
-                return JsonResponse({'error': 'Unauthorized'}, status=401)
             return redirect('login')
-        student = None
-        if id:
-            student = get_object_or_404(Student, id=id)
+        student = get_object_or_404(Student, id=id) if id else None
 
-        form_data = {
-            'name': student.name if student else '',
-            'age': student.age if student else '',
-            'email': student.email if student else '',
-            'phone': student.phone if student else '',
-            'address': student.address if student else '',
-        }
+    form_data = {
+        'name': student.name if student else '',
+        'age': student.age if student else '',
+        'email': student.email if student else '',
+        'phone': student.phone if student else '',
+        'address': student.address if student else '',
+    }
 
-        if request.method in ["POST", "PUT"]:
-            if request.headers.get('Content-Type') == 'application/json':
-                try:
-                    data = json.loads(request.body)
-                    name = data.get('name', '').strip()
-                    age = data.get('age', '').strip()
-                    email = data.get('email', '').strip()
-                    phone = data.get('phone', '').strip()
-                    address = data.get('address', '').strip()
-                except json.JSONDecodeError:
-                    return JsonResponse({'errors': ['Dữ liệu không hợp lệ.']}, status=400)
+    if request.method in ["POST", "PUT"]:
+        if is_json:
+            try:
+                data = json.loads(request.body)
+                name = data.get('name', '').strip()
+                age = data.get('age', '').strip()
+                email = data.get('email', '').strip()
+                phone = data.get('phone', '').strip()
+                address = data.get('address', '').strip()
+            except json.JSONDecodeError:
+                return JsonResponse({'errors': ['Dữ liệu không hợp lệ.']}, status=400)
+        else:
+            name = request.POST.get('name', '').strip()
+            age = request.POST.get('age', '').strip()
+            email = request.POST.get('email', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            address = request.POST.get('address', '').strip()
+
+        form_data.update({
+            'name': name,
+            'age': age,
+            'email': email,
+            'phone': phone,
+            'address': address,
+        })
+
+        # Kiểm tra hợp lệ
+        errors = []
+        if not name or '<script>' in name.lower():
+            errors.append("Tên không được để trống hoặc chứa mã độc.")
+        if not age.isdigit() or not (1 <= int(age) <= 120):
+            errors.append("Tuổi phải là số từ 1 đến 120.")
+        if not re.match(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', email):
+            errors.append("Email không hợp lệ.")
+        if Student.objects.filter(email=email).exclude(id=id).exists():
+            errors.append("Email đã tồn tại.")
+        if not phone.isdigit() or len(phone) != 10:
+            errors.append("Số điện thoại phải gồm đúng 10 chữ số.")
+        if Student.objects.filter(phone=phone).exclude(id=id).exists():
+            errors.append("Số điện thoại đã tồn tại.")
+        if not address or '<script>' in address.lower():
+            errors.append("Địa chỉ không được để trống hoặc chứa mã độc.")
+
+        if errors:
+            if is_json:
+                return JsonResponse({'errors': errors}, status=400)
             else:
-                name = request.POST.get('name', '').strip()
-                age = request.POST.get('age', '').strip()
-                email = request.POST.get('email', '').strip()
-                phone = request.POST.get('phone', '').strip()
-                address = request.POST.get('address', '').strip()
+                for error in errors:
+                    messages.error(request, error)
+                return render(request, 'main/student_form.html', {'form_data': form_data, 'student': student})
 
-            form_data.update({
-                'name': name,
-                'age': age,
-                'email': email,
-                'phone': phone,
-                'address': address,
-            })
+        # Nếu hợp lệ, lưu dữ liệu
+        if student:
+            student.name = name
+            student.age = age
+            student.email = email
+            student.phone = phone
+            student.address = address
+            student.save()
+            message = "Sinh viên đã được cập nhật."
+        else:
+            Student.objects.create(
+                name=name,
+                age=age,
+                email=email,
+                phone=phone,
+                address=address
+            )
+            message = "Sinh viên đã được thêm mới."
 
-            # Kiểm tra hợp lệ thủ công
-            errors = []
-            if not name or '<script>' in name.lower():
-                errors.append("Tên không được để trống hoặc chứa mã độc.")
-            if not age.isdigit() or not (1 <= int(age) <= 120):
-                errors.append("Tuổi phải là số từ 1 đến 120.")
-            if not re.match(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', email):
-                errors.append("Email không hợp lệ.")
-            if Student.objects.filter(email=email).exclude(id=id).exists():
-                errors.append("Email đã tồn tại.")
-            if not phone.isdigit() or len(phone) != 10:
-                errors.append("Số điện thoại phải gồm đúng 10 chữ số.")
-            if Student.objects.filter(phone=phone).exclude(id=id).exists():
-                errors.append("Số điện thoại đã tồn tại.")
-            if not address or '<script>' in address.lower():
-                errors.append("Địa chỉ không được để trống hoặc chứa mã độc.")
+        if is_json:
+            return JsonResponse({'message': message}, status=200)
+        else:
+            messages.success(request, message)
+            return redirect('student_list')
 
-            if errors:
-                if request.headers.get('Content-Type') == 'application/json':
-                    return JsonResponse({'errors': errors}, status=400)
-                else:
-                    for error in errors:
-                        messages.error(request, error)
-                    return render(request, 'main/student_form.html', {'form_data': form_data, 'student': student})
+    # Nếu là GET hoặc chưa gửi dữ liệu: trả về dữ liệu form
+    if is_json:
+        if student:
+            return JsonResponse({
+                'id': student.id,
+                'name': student.name,
+                'age': student.age,
+                'email': student.email,
+                'phone': student.phone,
+                'address': student.address,
+            }, status=200)
+        else:
+            return JsonResponse({'message': 'Ready to create new student'}, status=200)
 
-            # Nếu hợp lệ, lưu dữ liệu
-            if student:
-                student.name = name
-                student.age = age
-                student.email = email
-                student.phone = phone
-                student.address = address
-                student.save()
-                message = "Sinh viên đã được cập nhật."
-            else:
-                Student.objects.create(
-                    name=name,
-                    age=age,
-                    email=email,
-                    phone=phone,
-                    address=address
-                )
-                message = "Sinh viên đã được thêm mới."
+    return render(request, 'main/student_form.html', {'form_data': form_data, 'student': student})
 
-            if request.headers.get('Content-Type') == 'application/json':
-                return JsonResponse({'message': message}, status=200)
-            else:
-                messages.success(request, message)
-                return redirect('student_list')
-
-        return render(request, 'main/student_form.html', {'form_data': form_data, 'student': student})
 
 # -------- Xóa sinh viên --------
 def delete_student(request, id):
