@@ -117,7 +117,6 @@ def student_list(request):
     return render(request, 'main/student_list.html', {'students': students})
 
 # -------- Thêm / Chỉnh sửa sinh viên --------
-# -------- Thêm / Chỉnh sửa sinh viên --------
 def student_form(request, id=None):
     is_json = request.headers.get('Content-Type') == 'application/json'
 
